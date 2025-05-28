@@ -1,14 +1,30 @@
 const std = @import("std");
 const clap = @import("clap");
 
+const clap_params = clap.parseParamsComptime(
+    \\-h, --help           Display this help page.
+    \\-f, --infile <str>   Input file.
+    \\-o, --outfile <str>  Output file.
+);
+
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
     // Collect all the parameters supplied by the user into a struct.
-    const parameters = try getParameters(allocator);
-    _ = parameters;
+    const parameters = getParameters(allocator) catch {
+        // Failed to parse arguments, the user likely mangled the command.
+        // Print help page, then exit.
+        try showHelpPage();
+        return;
+    };
+
+    // If the user passed the help flag, print help page and exit.
+    if (parameters.help) {
+        try showHelpPage();
+        return;
+    }
 
     // Setup up for reading.
     // TODO: Replace with system that can read from stdin or a file.
@@ -68,23 +84,27 @@ pub fn main() !void {
     }
 }
 
-fn getParameters(allocator: std.mem.Allocator) !ZzdParameters {
-    const params = comptime clap.parseParamsComptime(
-        \\-h, --help Display this help.
-        \\-f, --infile <str> Input file.
-        \\-o, --outfile <str> Output file.
-    );
+const ParamError = error{
+    ParseError,
+};
+
+fn getParameters(allocator: std.mem.Allocator) ParamError!ZzdParameters {
 
     var diag = clap.Diagnostic{};
-    var res = clap.parse(clap.Help, &params, clap.parsers.default, .{
+    var res = clap.parse(clap.Help, &clap_params, clap.parsers.default, .{
         .diagnostic = &diag,
         .allocator = allocator,
-    }) catch |err| {
-        // TODO: Show the help page instead of this error when receiveing malformed arguments.
-        diag.report(std.io.getStdErr().writer(), err) catch {};
-        return err;
+    }) catch {
+        // TODO: A parsing error is not the only possible error.
+        // This catch should be expanded to cover all possible errors.
+        return ParamError.ParseError;
     };
     defer res.deinit();
+
+    if (res.args.help != 0) {
+        // If the user requested help, we can disregard all other arguments.
+        return ZzdParameters{ .help = true };
+    }
 
     return ZzdParameters{
         // If a file was supplied, set that as the input,
@@ -92,6 +112,10 @@ fn getParameters(allocator: std.mem.Allocator) !ZzdParameters {
         .input = if (res.args.infile) |f| ZzdParameters.Input{ .file = f } else ZzdParameters.Input.stdin,
         .output = if (res.args.outfile) |f| ZzdParameters.Output{ .file = f } else ZzdParameters.Output.stdout,
     };
+}
+
+fn showHelpPage() !void {
+    try clap.help(std.io.getStdErr().writer(), clap.Help, &clap_params, .{});
 }
 
 /// Replaces characters that would produce unwanted effects, such as '\n' with '.'
@@ -105,8 +129,9 @@ fn sanitizeAscii(string: []u8) void {
 }
 
 const ZzdParameters = struct {
-    input: Input,
-    output: Output,
+    help: bool = false,
+    input: Input = Input.stdin,
+    output: Output = Output.stdout,
 
     const Input = union(enum) {
         stdin: void,

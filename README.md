@@ -12,9 +12,10 @@ This project exists for me to learn about Zig. As such, I may go out of my way t
 
 Currently produces same output as `xxd` (with no arguments) when tested on the project's own `build.zig` file (excluding text color).  
 
+Functional help page printed on `zzd --help` or when passed malformed arguments.  
+
 ## Next Steps
 
-- Rework error handling properly before moving on  
-- Print the help page when `-h` is passed. Also print help when receiving malformed arguments  
 - Allow optional input from files  
 - Allow optional output to files  
+- Allow arbitrary column width (currently fixed to 16)  
