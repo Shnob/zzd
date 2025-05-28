@@ -48,7 +48,10 @@ pub fn main() !void {
     // Index of first byte of line in the file.
     var index: u32 = 0;
     while (true) : (index += 16) {
+        // Attempt to read from input. Take note of how many characters were actually read (n).
         n = try reader.read(buf[0..]);
+
+        // If no characters read (i.e. EOF) exit loop.
         if (n == 0) {
             break;
         }
@@ -67,7 +70,11 @@ pub fn main() !void {
         // Iterate through each byte and print the hex representation.
         // A space will break up line into pairs of bytes, for readability
         for (buf, 0..) |byte, i| {
+            // This flag is true if the file contains this byte.
+            // This could be false if the file does not have a number of bytes divisible by the column width.
             const known_byte = i < n;
+
+            // Should this byte have a space after it?
             const space = if (i % 2 == 1) " " else "";
 
             if (known_byte) {
@@ -89,7 +96,6 @@ const ParamError = error{
 };
 
 fn getParameters(allocator: std.mem.Allocator) ParamError!ZzdParameters {
-
     var diag = clap.Diagnostic{};
     var res = clap.parse(clap.Help, &clap_params, clap.parsers.default, .{
         .diagnostic = &diag,
@@ -118,11 +124,11 @@ fn showHelpPage() !void {
     try clap.help(std.io.getStdErr().writer(), clap.Help, &clap_params, .{});
 }
 
-/// Replaces characters that would produce unwanted effects, such as '\n' with '.'
-/// TODO: Currently not exhaustive. Add all cases.
+/// Replaces all unprintable characters with '.'
 fn sanitizeAscii(string: []u8) void {
     for (string) |*char| {
-        if (char.* == '\n' or char.* == '\t') {
+        // If character is not printable in ascii.
+        if (!std.ascii.isPrint(char.*)) {
             char.* = '.';
         }
     }

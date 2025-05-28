@@ -10,7 +10,7 @@ This project exists for me to learn about Zig. As such, I may go out of my way t
 
 ## Status
 
-Currently produces same output as `xxd` (with no arguments) when tested on the project's own `build.zig` file (excluding text color).  
+Currently produces same output as `xxd` (with no arguments) when tested on the `ascii_range.txt` file (excluding text color). `ascii_range.txt` contains every 8 bit char.  
 
 Functional help page printed on `zzd --help` or when passed malformed arguments.  
 
