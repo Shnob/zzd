@@ -14,8 +14,10 @@ Currently produces same output as `xxd` (with no arguments) when tested on the `
 
 Functional help page printed on `zzd --help` or when passed malformed arguments.  
 
+Currently disregards the user's selected input and output files and uses stdin and stdout instead.  
+
 ## Next Steps
 
 - Allow optional input from files  
 - Allow optional output to files  
-- Allow arbitrary column width (currently fixed to 16)  
+- Handle invalid arguments (e.g. column length must be >0)  

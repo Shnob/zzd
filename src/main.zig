@@ -40,15 +40,19 @@ pub fn main() !void {
     const writer = bw.writer();
 
     // Stores the current line of bytes to be formatted and printed.
-    // TODO: Make size of buffer (and all downstream buffers) variable.
-    var buf: [16]u8 = undefined;
+    var buf = try allocator.alloc(u8, parameters.columns);
+    defer allocator.free(buf);
 
-    // Number of characters actually read. The buffer will not always be filled
+    // Stores a copy of buf, modified for ascii printing.
+    var ascii = try allocator.alloc(u8, buf.len);
+    defer allocator.free(ascii);
+
+    // Number of characters actually read. The buffer will not always be filled.
     var n: usize = undefined;
 
     // Index of first byte of line in the file.
     var index: u32 = 0;
-    while (true) : (index += 16) {
+    while (true) : (index += parameters.columns) {
         // Attempt to read from input. Take note of how many characters were actually read (n).
         n = try reader.read(buf[0..]);
 
@@ -57,13 +61,11 @@ pub fn main() !void {
             break;
         }
 
-        // Make a copy of buf that we can modify for printing.
-        // This forms the ascii representation on the right hand side of the output.
-        var ascii: [16]u8 = undefined;
+        // Copy buf to ascii, so that it can be independently modified.
         @memcpy(ascii[0..n], buf[0..n]);
 
         // Remove things line '\n' and '\t' or else it will distort our formatting.
-        sanitizeAscii(&ascii);
+        sanitizeAscii(ascii);
 
         // Print index information on the left of the line (in hex).
         try writer.print("{x:0>8}: ", .{index});
@@ -75,8 +77,14 @@ pub fn main() !void {
             // This could be false if the file does not have a number of bytes divisible by the column width.
             const known_byte = i < n;
 
-            // Should this byte have a space after it?
-            const space = if (i % 2 == 1) " " else "";
+            // Should this byte have a (double?) space after it?
+            const space =
+                if (i + 1 == parameters.columns)
+                "  " // Final byte, double space.
+            else if (i % 2 == 1)
+                " " // Second byte of pair, single space.
+            else
+                ""; // First byte of pair, no space.
 
             if (known_byte) {
                 try writer.print("{x:0>2}{s}", .{ byte, space });
@@ -86,7 +94,7 @@ pub fn main() !void {
         }
 
         // Print the ascii version of the bytes on the right of the line.
-        try writer.print(" {s}\n", .{ascii[0..n]});
+        try writer.print("{s}\n", .{ascii[0..n]});
 
         try bw.flush();
     }
