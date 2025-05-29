@@ -28,9 +28,9 @@ pub fn main() !void {
     }
 
     // Setup up for reading.
-    // TODO: Replace with system that can read from stdin or a file.
-    const stdin_reader = std.io.getStdIn().reader();
-    var br = std.io.bufferedReader(stdin_reader);
+    var zzd_reader = try ZzdReader.init(allocator, parameters);
+    defer zzd_reader.deinit();
+    var br = std.io.bufferedReader(zzd_reader.reader.*);
     const reader = br.reader();
 
     // Setup up for writing.
@@ -99,6 +99,59 @@ pub fn main() !void {
         try bw.flush();
     }
 }
+
+const ZzdReader = struct {
+    aa: std.heap.ArenaAllocator,
+    reader: *std.io.AnyReader,
+
+    fn init(allocator: std.mem.Allocator, parameters: ZzdParameters) !ZzdReader {
+        switch (parameters.input) {
+            ZzdParameters.Input.stdin => return try ZzdReader.initStdinReader(allocator),
+            ZzdParameters.Input.file => |f| return try ZzdReader.initFileReader(allocator, f),
+        }
+    }
+
+    fn initStdinReader(allocator: std.mem.Allocator) !ZzdReader {
+        var zzd_reader = ZzdReader{
+            .aa = std.heap.ArenaAllocator.init(allocator),
+            .reader = undefined,
+        };
+
+        const stdin_reader = try zzd_reader.aa.allocator().create(std.fs.File.Reader);
+        stdin_reader.* = std.io.getStdIn().reader();
+
+        const reader = try zzd_reader.aa.allocator().create(std.io.AnyReader);
+        reader.* = stdin_reader.any();
+
+        zzd_reader.reader = reader;
+
+        return zzd_reader;
+    }
+
+    fn initFileReader(allocator: std.mem.Allocator, file_name: []const u8) !ZzdReader {
+        var zzd_reader = ZzdReader{
+            .aa = std.heap.ArenaAllocator.init(allocator),
+            .reader = undefined,
+        };
+
+        const file = try zzd_reader.aa.allocator().create(std.fs.File);
+        file.* = try std.fs.cwd().openFile(file_name, .{ .mode = std.fs.File.OpenMode.read_only });
+
+        const file_reader = try zzd_reader.aa.allocator().create(std.fs.File.Reader);
+        file_reader.* = file.reader();
+
+        const reader = try zzd_reader.aa.allocator().create(std.io.AnyReader);
+        reader.* = file_reader.any();
+
+        zzd_reader.reader = reader;
+
+        return zzd_reader;
+    }
+
+    fn deinit(self: ZzdReader) void {
+        self.aa.deinit();
+    }
+};
 
 const ParamError = error{
     ParseError,
