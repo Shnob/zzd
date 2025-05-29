@@ -3,8 +3,9 @@ const clap = @import("clap");
 
 const clap_params = clap.parseParamsComptime(
     \\-h, --help           Display this help page.
-    \\-f, --infile <str>   Input file.
-    \\-o, --outfile <str>  Output file.
+    \\-f, --infile <str>   Input file. Will use stdin if not specified.
+    \\-o, --outfile <str>  Output file. Will use stdout if not specified.
+    \\-c, --columns <u16>  Number of bytes per column. Default: 16. Max: 65535.
 );
 
 pub fn main() !void {
@@ -112,12 +113,20 @@ fn getParameters(allocator: std.mem.Allocator) ParamError!ZzdParameters {
         return ZzdParameters{ .help = true };
     }
 
-    return ZzdParameters{
-        // If a file was supplied, set that as the input,
-        // else, set stdin as the input.
-        .input = if (res.args.infile) |f| ZzdParameters.Input{ .file = f } else ZzdParameters.Input.stdin,
-        .output = if (res.args.outfile) |f| ZzdParameters.Output{ .file = f } else ZzdParameters.Output.stdout,
-    };
+    // Create default parameter list.
+    var parameters = ZzdParameters{};
+
+    // Modify the default parameters with user specified ones.
+    if (res.args.infile) |f|
+        parameters.input = ZzdParameters.Input{ .file = f };
+
+    if (res.args.outfile) |f|
+        parameters.output = ZzdParameters.Output{ .file = f };
+
+    if (res.args.columns) |c|
+        parameters.columns = c;
+
+    return parameters;
 }
 
 fn showHelpPage() !void {
@@ -135,9 +144,11 @@ fn sanitizeAscii(string: []u8) void {
 }
 
 const ZzdParameters = struct {
+    // NOTE: All parameters must have a default.
     help: bool = false,
     input: Input = Input.stdin,
     output: Output = Output.stdout,
+    columns: u16 = 16,
 
     const Input = union(enum) {
         stdin: void,
