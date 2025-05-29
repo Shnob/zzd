@@ -14,10 +14,8 @@ Currently produces same output as `xxd` (with no arguments) when tested on the `
 
 Functional help page printed on `zzd --help` or when passed malformed arguments.  
 
-Currently disregards the user's selected output file and uses stdout instead.  
-
 ## Next Steps
 
-- Allow optional output to files  
 - Handle invalid arguments (e.g. column length must be >0)  
 - Investigate exactly which heap allocations are required for the input/output reader initialization  
+- Add color?

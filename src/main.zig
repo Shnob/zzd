@@ -34,9 +34,9 @@ pub fn main() !void {
     const reader = br.reader();
 
     // Setup up for writing.
-    // TODO: Replace with system that can write to stdout or a file.
-    const stdout_writer = std.io.getStdOut().writer();
-    var bw = std.io.bufferedWriter(stdout_writer);
+    var zzd_writer = try ZzdWriter.init(allocator, parameters);
+    defer zzd_writer.deinit();
+    var bw = std.io.bufferedWriter(zzd_writer.writer.*);
     const writer = bw.writer();
 
     // Stores the current line of bytes to be formatted and printed.
@@ -149,6 +149,59 @@ const ZzdReader = struct {
     }
 
     fn deinit(self: ZzdReader) void {
+        self.aa.deinit();
+    }
+};
+
+const ZzdWriter = struct {
+    aa: std.heap.ArenaAllocator,
+    writer: *std.io.AnyWriter,
+
+    fn init(allocator: std.mem.Allocator, parameters: ZzdParameters) !ZzdWriter {
+        switch (parameters.output) {
+            ZzdParameters.Output.stdout => return try ZzdWriter.initStdoutWriter(allocator),
+            ZzdParameters.Output.file => |f| return try ZzdWriter.initFileWriter(allocator, f),
+        }
+    }
+
+    fn initStdoutWriter(allocator: std.mem.Allocator) !ZzdWriter {
+        var zzd_writer = ZzdWriter{
+            .aa = std.heap.ArenaAllocator.init(allocator),
+            .writer = undefined,
+        };
+
+        const stdout_writer = try zzd_writer.aa.allocator().create(std.fs.File.Writer);
+        stdout_writer.* = std.io.getStdOut().writer();
+
+        const writer = try zzd_writer.aa.allocator().create(std.io.AnyWriter);
+        writer.* = stdout_writer.any();
+
+        zzd_writer.writer = writer;
+
+        return zzd_writer;
+    }
+
+    fn initFileWriter(allocator: std.mem.Allocator, file_name: []const u8) !ZzdWriter {
+        var zzd_writer = ZzdWriter{
+            .aa = std.heap.ArenaAllocator.init(allocator),
+            .writer = undefined,
+        };
+
+        const file = try zzd_writer.aa.allocator().create(std.fs.File);
+        file.* = try std.fs.cwd().createFile(file_name, .{});
+
+        const file_writer = try zzd_writer.aa.allocator().create(std.fs.File.Writer);
+        file_writer.* = file.writer();
+
+        const writer = try zzd_writer.aa.allocator().create(std.io.AnyWriter);
+        writer.* = file_writer.any();
+
+        zzd_writer.writer = writer;
+
+        return zzd_writer;
+    }
+
+    fn deinit(self: ZzdWriter) void {
         self.aa.deinit();
     }
 };
