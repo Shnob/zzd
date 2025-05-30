@@ -16,5 +16,5 @@ Functional help page printed on `zzd --help` or when passed malformed arguments.
 
 ## Next Steps
 
-- Handle invalid arguments (e.g. column length must be >0)  
+- Check if the output file is writable  
 - Add color?

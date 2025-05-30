@@ -8,15 +8,15 @@ const clap_params = clap.parseParamsComptime(
     \\-c, --columns <u16>  Number of bytes per column. Default: 16. Max: 65535.
 );
 
-pub fn getParameters(allocator: std.mem.Allocator) ParamError!ZzdParameters {
+pub fn getParameters(allocator: std.mem.Allocator) !?ZzdParameters {
     var diag = clap.Diagnostic{};
     var res = clap.parse(clap.Help, &clap_params, clap.parsers.default, .{
         .diagnostic = &diag,
         .allocator = allocator,
     }) catch {
-        // TODO: A parsing error is not the only possible error.
-        // This catch should be expanded to cover all possible errors.
-        return ParamError.ParseError;
+        // Could not parse arguments, print help page and return null.
+        try showHelpPage();
+        return null;
     };
     defer res.deinit();
 
@@ -37,6 +37,11 @@ pub fn getParameters(allocator: std.mem.Allocator) ParamError!ZzdParameters {
 
     if (res.args.columns) |c|
         parameters.columns = c;
+
+    if (!try parameters.checkIsValid()) {
+        // If any of the parameters are invalid, return null.
+        return null;
+    }
 
     return parameters;
 }
@@ -61,8 +66,29 @@ pub const ZzdParameters = struct {
         stdout: void,
         file: []const u8,
     };
-};
 
-pub const ParamError = error{
-    ParseError,
+    pub fn checkIsValid(self: ZzdParameters) !bool {
+        const stderr = std.io.getStdErr().writer();
+
+        if (self.columns == 0) {
+            try stderr.print("zzd: --columns must be > 0\n", .{});
+            return false;
+        }
+
+        // Check if input file is real and readable
+        switch (self.input) {
+            Input.file => |f| std.fs.cwd().access(f, .{.mode = .read_only}) catch {
+                try stderr.print("zzd: input file '{s}' cannot be accessed\n", .{f});
+                return false;
+            },
+            else => {},
+        }
+
+        // TODO: Check if output file can be written to.
+        // The user may have specified a file that has write protection.
+
+        // This function follows the guard pattern,
+        // If we made it to the end, the parameters must be valid.
+        return true;
+    }
 };

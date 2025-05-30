@@ -8,12 +8,9 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     // Collect all the parameters supplied by the user into a struct.
-    const parameters = param.getParameters(allocator) catch {
-        // Failed to parse arguments, the user likely mangled the command.
-        // Print help page, then exit.
-        try param.showHelpPage();
-        return;
-    };
+    // If we received null, either parsing failed, or the parameters were invalid.
+    // The function prints information to the user, we simply need to return.
+    const parameters = try param.getParameters(allocator) orelse return;
 
     // If the user passed the help flag, print help page and exit.
     if (parameters.help) {
