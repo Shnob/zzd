@@ -10,9 +10,10 @@ pub const ZzdReader = struct {
     // Everything is allocated in with an arena allocator to make clean up easy.
     aa: std.heap.ArenaAllocator,
     reader: *std.io.AnyReader,
+    file: ?std.fs.File = null,
 
     /// Initialize the reader as required by the passed parameters.
-    fn init(allocator: std.mem.Allocator, parameters: param.ZzdParameters) !ZzdReader {
+    pub fn init(allocator: std.mem.Allocator, parameters: param.ZzdParameters) !ZzdReader {
         switch (parameters.input) {
             param.ZzdParameters.Input.stdin => return try ZzdReader.initStdinReader(allocator),
             param.ZzdParameters.Input.file => |f| return try ZzdReader.initFileReader(allocator, f),
@@ -20,7 +21,7 @@ pub const ZzdReader = struct {
     }
 
     /// Code for initializing the stdin version of this struct.
-    fn initStdinReader(allocator: std.mem.Allocator) !ZzdReader {
+    pub fn initStdinReader(allocator: std.mem.Allocator) !ZzdReader {
         var zzd_reader = ZzdReader{
             .aa = std.heap.ArenaAllocator.init(allocator),
             .reader = undefined,
@@ -38,17 +39,17 @@ pub const ZzdReader = struct {
     }
 
     /// For initializing the file version of this struct.
-    fn initFileReader(allocator: std.mem.Allocator, file_name: []const u8) !ZzdReader {
+    pub fn initFileReader(allocator: std.mem.Allocator, file_name: []const u8) !ZzdReader {
         var zzd_reader = ZzdReader{
             .aa = std.heap.ArenaAllocator.init(allocator),
             .reader = undefined,
+            .file = null,
         };
 
-        const file = try zzd_reader.aa.allocator().create(std.fs.File);
-        file.* = try std.fs.cwd().openFile(file_name, .{ .mode = std.fs.File.OpenMode.read_only });
+        zzd_reader.file = try std.fs.cwd().openFile(file_name, .{ .mode = std.fs.File.OpenMode.read_only });
 
         const file_reader = try zzd_reader.aa.allocator().create(std.fs.File.Reader);
-        file_reader.* = file.reader();
+        file_reader.* = (zzd_reader.file orelse unreachable).reader();
 
         const reader = try zzd_reader.aa.allocator().create(std.io.AnyReader);
         reader.* = file_reader.any();
@@ -59,7 +60,10 @@ pub const ZzdReader = struct {
     }
 
     /// Clean up all memory allocated for this reader.
-    fn deinit(self: ZzdReader) void {
+    pub fn deinit(self: *ZzdReader) void {
+        if (self.file) |f| {
+            f.close();
+        }
         self.aa.deinit();
     }
 };
@@ -68,9 +72,10 @@ pub const ZzdWriter = struct {
     // Everything is allocated in with an arena allocator to make clean up easy.
     aa: std.heap.ArenaAllocator,
     writer: *std.io.AnyWriter,
+    file: ?std.fs.File = null,
 
     /// Initialize the reader as required by the passed parameters.
-    fn init(allocator: std.mem.Allocator, parameters: param.ZzdParameters) !ZzdWriter {
+    pub fn init(allocator: std.mem.Allocator, parameters: param.ZzdParameters) !ZzdWriter {
         switch (parameters.output) {
             param.ZzdParameters.Output.stdout => return try ZzdWriter.initStdoutWriter(allocator),
             param.ZzdParameters.Output.file => |f| return try ZzdWriter.initFileWriter(allocator, f),
@@ -78,7 +83,7 @@ pub const ZzdWriter = struct {
     }
 
     /// Code for initializing the stdout version of this struct.
-    fn initStdoutWriter(allocator: std.mem.Allocator) !ZzdWriter {
+    pub fn initStdoutWriter(allocator: std.mem.Allocator) !ZzdWriter {
         var zzd_writer = ZzdWriter{
             .aa = std.heap.ArenaAllocator.init(allocator),
             .writer = undefined,
@@ -96,17 +101,17 @@ pub const ZzdWriter = struct {
     }
 
     /// For initializing the file version of this struct.
-    fn initFileWriter(allocator: std.mem.Allocator, file_name: []const u8) !ZzdWriter {
+    pub fn initFileWriter(allocator: std.mem.Allocator, file_name: []const u8) !ZzdWriter {
         var zzd_writer = ZzdWriter{
             .aa = std.heap.ArenaAllocator.init(allocator),
             .writer = undefined,
+            .file = null,
         };
 
-        const file = try zzd_writer.aa.allocator().create(std.fs.File);
-        file.* = try std.fs.cwd().createFile(file_name, .{});
+        zzd_writer.file = try std.fs.cwd().createFile(file_name, .{});
 
         const file_writer = try zzd_writer.aa.allocator().create(std.fs.File.Writer);
-        file_writer.* = file.writer();
+        file_writer.* = (zzd_writer.file orelse unreachable).writer();
 
         const writer = try zzd_writer.aa.allocator().create(std.io.AnyWriter);
         writer.* = file_writer.any();
@@ -117,7 +122,10 @@ pub const ZzdWriter = struct {
     }
 
     /// Clean up all memory allocated for this writer.
-    fn deinit(self: ZzdWriter) void {
+    pub fn deinit(self: *ZzdWriter) void {
+        if (self.file) |f| {
+            f.close();
+        }
         self.aa.deinit();
     }
 };

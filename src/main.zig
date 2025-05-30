@@ -91,5 +91,10 @@ pub fn main() !void {
         try writer.print("{s}\n", .{ascii[0..n]});
 
         try bw.flush();
+
+        if (n < parameters.columns) {
+            // If we read less than the column width, we have reached the end of the file.
+            break;
+        }
     }
 }
