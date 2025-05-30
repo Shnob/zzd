@@ -22,15 +22,15 @@ pub fn main() !void {
     }
 
     // Setup up for reading.
-    var zzd_reader = try text.ZzdReader.init(allocator, parameters);
-    defer zzd_reader.deinit();
-    var br = std.io.bufferedReader(zzd_reader.reader.*);
+    var input_file = try text.getInputFile(parameters);
+    defer input_file.close();
+    var br = std.io.bufferedReader(input_file.reader());
     const reader = br.reader();
 
     // Setup up for writing.
-    var zzd_writer = try text.ZzdWriter.init(allocator, parameters);
-    defer zzd_writer.deinit();
-    var bw = std.io.bufferedWriter(zzd_writer.writer.*);
+    var output_file = try text.getOutputFile(parameters);
+    defer output_file.close();
+    var bw = std.io.bufferedWriter(output_file.writer());
     const writer = bw.writer();
 
     // Stores the current line of bytes to be formatted and printed.

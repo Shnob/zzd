@@ -17,5 +17,4 @@ Functional help page printed on `zzd --help` or when passed malformed arguments.
 ## Next Steps
 
 - Handle invalid arguments (e.g. column length must be >0)  
-- Replace the reader/writer situation with a system that returns a file (because stdin/stdout can also be treated as a file) then do reader/writer operations on that.  
 - Add color?
