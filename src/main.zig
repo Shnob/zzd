@@ -1,5 +1,6 @@
 const std = @import("std");
 const param = @import("parameters.zig");
+const text = @import("text.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -21,13 +22,13 @@ pub fn main() !void {
     }
 
     // Setup up for reading.
-    var zzd_reader = try ZzdReader.init(allocator, parameters);
+    var zzd_reader = try text.ZzdReader.init(allocator, parameters);
     defer zzd_reader.deinit();
     var br = std.io.bufferedReader(zzd_reader.reader.*);
     const reader = br.reader();
 
     // Setup up for writing.
-    var zzd_writer = try ZzdWriter.init(allocator, parameters);
+    var zzd_writer = try text.ZzdWriter.init(allocator, parameters);
     defer zzd_writer.deinit();
     var bw = std.io.bufferedWriter(zzd_writer.writer.*);
     const writer = bw.writer();
@@ -58,7 +59,7 @@ pub fn main() !void {
         @memcpy(ascii[0..n], buf[0..n]);
 
         // Remove things line '\n' and '\t' or else it will distort our formatting.
-        sanitizeAscii(ascii);
+        text.sanitizeAscii(ascii);
 
         // Print index information on the left of the line (in hex).
         try writer.print("{x:0>8}: ", .{index});
@@ -90,121 +91,5 @@ pub fn main() !void {
         try writer.print("{s}\n", .{ascii[0..n]});
 
         try bw.flush();
-    }
-}
-
-const ZzdReader = struct {
-    aa: std.heap.ArenaAllocator,
-    reader: *std.io.AnyReader,
-
-    fn init(allocator: std.mem.Allocator, parameters: param.ZzdParameters) !ZzdReader {
-        switch (parameters.input) {
-            param.ZzdParameters.Input.stdin => return try ZzdReader.initStdinReader(allocator),
-            param.ZzdParameters.Input.file => |f| return try ZzdReader.initFileReader(allocator, f),
-        }
-    }
-
-    fn initStdinReader(allocator: std.mem.Allocator) !ZzdReader {
-        var zzd_reader = ZzdReader{
-            .aa = std.heap.ArenaAllocator.init(allocator),
-            .reader = undefined,
-        };
-
-        const stdin_reader = try zzd_reader.aa.allocator().create(std.fs.File.Reader);
-        stdin_reader.* = std.io.getStdIn().reader();
-
-        const reader = try zzd_reader.aa.allocator().create(std.io.AnyReader);
-        reader.* = stdin_reader.any();
-
-        zzd_reader.reader = reader;
-
-        return zzd_reader;
-    }
-
-    fn initFileReader(allocator: std.mem.Allocator, file_name: []const u8) !ZzdReader {
-        var zzd_reader = ZzdReader{
-            .aa = std.heap.ArenaAllocator.init(allocator),
-            .reader = undefined,
-        };
-
-        const file = try zzd_reader.aa.allocator().create(std.fs.File);
-        file.* = try std.fs.cwd().openFile(file_name, .{ .mode = std.fs.File.OpenMode.read_only });
-
-        const file_reader = try zzd_reader.aa.allocator().create(std.fs.File.Reader);
-        file_reader.* = file.reader();
-
-        const reader = try zzd_reader.aa.allocator().create(std.io.AnyReader);
-        reader.* = file_reader.any();
-
-        zzd_reader.reader = reader;
-
-        return zzd_reader;
-    }
-
-    fn deinit(self: ZzdReader) void {
-        self.aa.deinit();
-    }
-};
-
-const ZzdWriter = struct {
-    aa: std.heap.ArenaAllocator,
-    writer: *std.io.AnyWriter,
-
-    fn init(allocator: std.mem.Allocator, parameters: param.ZzdParameters) !ZzdWriter {
-        switch (parameters.output) {
-            param.ZzdParameters.Output.stdout => return try ZzdWriter.initStdoutWriter(allocator),
-            param.ZzdParameters.Output.file => |f| return try ZzdWriter.initFileWriter(allocator, f),
-        }
-    }
-
-    fn initStdoutWriter(allocator: std.mem.Allocator) !ZzdWriter {
-        var zzd_writer = ZzdWriter{
-            .aa = std.heap.ArenaAllocator.init(allocator),
-            .writer = undefined,
-        };
-
-        const stdout_writer = try zzd_writer.aa.allocator().create(std.fs.File.Writer);
-        stdout_writer.* = std.io.getStdOut().writer();
-
-        const writer = try zzd_writer.aa.allocator().create(std.io.AnyWriter);
-        writer.* = stdout_writer.any();
-
-        zzd_writer.writer = writer;
-
-        return zzd_writer;
-    }
-
-    fn initFileWriter(allocator: std.mem.Allocator, file_name: []const u8) !ZzdWriter {
-        var zzd_writer = ZzdWriter{
-            .aa = std.heap.ArenaAllocator.init(allocator),
-            .writer = undefined,
-        };
-
-        const file = try zzd_writer.aa.allocator().create(std.fs.File);
-        file.* = try std.fs.cwd().createFile(file_name, .{});
-
-        const file_writer = try zzd_writer.aa.allocator().create(std.fs.File.Writer);
-        file_writer.* = file.writer();
-
-        const writer = try zzd_writer.aa.allocator().create(std.io.AnyWriter);
-        writer.* = file_writer.any();
-
-        zzd_writer.writer = writer;
-
-        return zzd_writer;
-    }
-
-    fn deinit(self: ZzdWriter) void {
-        self.aa.deinit();
-    }
-};
-
-/// Replaces all unprintable characters with '.'
-fn sanitizeAscii(string: []u8) void {
-    for (string) |*char| {
-        // If character is not printable in ascii.
-        if (!std.ascii.isPrint(char.*)) {
-            char.* = '.';
-        }
     }
 }
