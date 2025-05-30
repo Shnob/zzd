@@ -1,12 +1,5 @@
 const std = @import("std");
-const clap = @import("clap");
-
-const clap_params = clap.parseParamsComptime(
-    \\-h, --help           Display this help page.
-    \\-f, --infile <str>   Input file. Will use stdin if not specified.
-    \\-o, --outfile <str>  Output file. Will use stdout if not specified.
-    \\-c, --columns <u16>  Number of bytes per column. Default: 16. Max: 65535.
-);
+const param = @import("parameters.zig");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -14,16 +7,16 @@ pub fn main() !void {
     const allocator = gpa.allocator();
 
     // Collect all the parameters supplied by the user into a struct.
-    const parameters = getParameters(allocator) catch {
+    const parameters = param.getParameters(allocator) catch {
         // Failed to parse arguments, the user likely mangled the command.
         // Print help page, then exit.
-        try showHelpPage();
+        try param.showHelpPage();
         return;
     };
 
     // If the user passed the help flag, print help page and exit.
     if (parameters.help) {
-        try showHelpPage();
+        try param.showHelpPage();
         return;
     }
 
@@ -104,10 +97,10 @@ const ZzdReader = struct {
     aa: std.heap.ArenaAllocator,
     reader: *std.io.AnyReader,
 
-    fn init(allocator: std.mem.Allocator, parameters: ZzdParameters) !ZzdReader {
+    fn init(allocator: std.mem.Allocator, parameters: param.ZzdParameters) !ZzdReader {
         switch (parameters.input) {
-            ZzdParameters.Input.stdin => return try ZzdReader.initStdinReader(allocator),
-            ZzdParameters.Input.file => |f| return try ZzdReader.initFileReader(allocator, f),
+            param.ZzdParameters.Input.stdin => return try ZzdReader.initStdinReader(allocator),
+            param.ZzdParameters.Input.file => |f| return try ZzdReader.initFileReader(allocator, f),
         }
     }
 
@@ -157,10 +150,10 @@ const ZzdWriter = struct {
     aa: std.heap.ArenaAllocator,
     writer: *std.io.AnyWriter,
 
-    fn init(allocator: std.mem.Allocator, parameters: ZzdParameters) !ZzdWriter {
+    fn init(allocator: std.mem.Allocator, parameters: param.ZzdParameters) !ZzdWriter {
         switch (parameters.output) {
-            ZzdParameters.Output.stdout => return try ZzdWriter.initStdoutWriter(allocator),
-            ZzdParameters.Output.file => |f| return try ZzdWriter.initFileWriter(allocator, f),
+            param.ZzdParameters.Output.stdout => return try ZzdWriter.initStdoutWriter(allocator),
+            param.ZzdParameters.Output.file => |f| return try ZzdWriter.initFileWriter(allocator, f),
         }
     }
 
@@ -206,47 +199,6 @@ const ZzdWriter = struct {
     }
 };
 
-const ParamError = error{
-    ParseError,
-};
-
-fn getParameters(allocator: std.mem.Allocator) ParamError!ZzdParameters {
-    var diag = clap.Diagnostic{};
-    var res = clap.parse(clap.Help, &clap_params, clap.parsers.default, .{
-        .diagnostic = &diag,
-        .allocator = allocator,
-    }) catch {
-        // TODO: A parsing error is not the only possible error.
-        // This catch should be expanded to cover all possible errors.
-        return ParamError.ParseError;
-    };
-    defer res.deinit();
-
-    if (res.args.help != 0) {
-        // If the user requested help, we can disregard all other arguments.
-        return ZzdParameters{ .help = true };
-    }
-
-    // Create default parameter list.
-    var parameters = ZzdParameters{};
-
-    // Modify the default parameters with user specified ones.
-    if (res.args.infile) |f|
-        parameters.input = ZzdParameters.Input{ .file = f };
-
-    if (res.args.outfile) |f|
-        parameters.output = ZzdParameters.Output{ .file = f };
-
-    if (res.args.columns) |c|
-        parameters.columns = c;
-
-    return parameters;
-}
-
-fn showHelpPage() !void {
-    try clap.help(std.io.getStdErr().writer(), clap.Help, &clap_params, .{});
-}
-
 /// Replaces all unprintable characters with '.'
 fn sanitizeAscii(string: []u8) void {
     for (string) |*char| {
@@ -256,21 +208,3 @@ fn sanitizeAscii(string: []u8) void {
         }
     }
 }
-
-const ZzdParameters = struct {
-    // NOTE: All parameters must have a default.
-    help: bool = false,
-    input: Input = Input.stdin,
-    output: Output = Output.stdout,
-    columns: u16 = 16,
-
-    const Input = union(enum) {
-        stdin: void,
-        file: []const u8,
-    };
-
-    const Output = union(enum) {
-        stdout: void,
-        file: []const u8,
-    };
-};
