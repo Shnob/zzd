@@ -71,11 +71,11 @@ pub fn main() !void {
             // Should this byte have a (double?) space after it?
             const space =
                 if (i + 1 == parameters.columns)
-                "  " // Final byte, double space.
-            else if (i % 2 == 1)
-                " " // Second byte of pair, single space.
-            else
-                ""; // First byte of pair, no space.
+                    "  " // Final byte, double space.
+                else if (i % 2 == 1)
+                    " " // Second byte of pair, single space.
+                else
+                    ""; // First byte of pair, no space.
 
             if (known_byte) {
                 try writer.print("{x:0>2}{s}", .{ byte, space });
@@ -87,11 +87,11 @@ pub fn main() !void {
         // Print the ascii version of the bytes on the right of the line.
         try writer.print("{s}\n", .{ascii[0..n]});
 
-        try bw.flush();
-
         if (n < parameters.columns) {
             // If we read less than the column width, we have reached the end of the file.
             break;
         }
     }
+
+    try bw.flush();
 }

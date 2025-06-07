@@ -77,7 +77,7 @@ pub const ZzdParameters = struct {
 
         // Check if input file is real and readable
         switch (self.input) {
-            Input.file => |f| std.fs.cwd().access(f, .{.mode = .read_only}) catch {
+            Input.file => |f| std.fs.cwd().access(f, .{ .mode = .read_only }) catch {
                 try stderr.print("zzd: input file '{s}' cannot be accessed\n", .{f});
                 return false;
             },
