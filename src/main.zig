@@ -96,6 +96,7 @@ pub fn main() !void {
 
         // Print the ascii version of the bytes on the right of the line.
         _ = try writer.write(ascii[0..n]);
+        _ = try writer.write("\n");
 
         if (n < parameters.columns) {
             // If we read less than the column width, we have reached the end of the file.
