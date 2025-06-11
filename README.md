@@ -16,5 +16,5 @@ Functional help page printed on `zzd --help` or when passed malformed arguments.
 
 ## Next Steps
 
+- Don't write color if output is stdout  
 - Check if the output file is writable  
-- Add color?

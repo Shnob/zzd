@@ -60,6 +60,7 @@ pub fn main() !void {
 
         // Print index information on the left of the line (in hex).
         // TODO: Maybe try to optimize this?
+        _ = try writer.write(&text.color_clear);
         try writer.print("{x:0>8}: ", .{index});
 
         // Iterate through each byte and print the hex representation.
@@ -81,6 +82,8 @@ pub fn main() !void {
                     digit_1 += (97-58);
                 }
 
+                _ = try writer.write(text.byteColor(byte));
+
                 _ = try writer.write(&[2]u8{digit_0, digit_1});
             } else {
                 // If the byte is does not exist, just print a space.
@@ -95,6 +98,9 @@ pub fn main() !void {
 
         }
 
+        // TODO: Color ascii text the same as the bytes
+        _ = try writer.write(&text.color_clear);
+
         // Print the ascii version of the bytes on the right of the line.
         _ = try writer.write(ascii[0..n]);
         _ = try writer.write("\n");
@@ -105,5 +111,6 @@ pub fn main() !void {
         }
     }
 
+    _ = try writer.write(&text.color_clear);
     try bw.flush();
 }
