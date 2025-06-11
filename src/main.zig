@@ -68,20 +68,30 @@ pub fn main() !void {
             // This could be false if the file does not have a number of bytes divisible by the column width.
             const known_byte = i < n;
 
-            // Should this byte have a (double?) space after it?
-            const space =
-                if (i + 1 == parameters.columns)
-                    "  " // Final byte, double space.
-                else if (i % 2 == 1)
-                    " " // Second byte of pair, single space.
-                else
-                    ""; // First byte of pair, no space.
-
             if (known_byte) {
-                try writer.print("{x:0>2}{s}", .{ byte, space });
+                // First of the two digit hex number.
+                var digit_0: u8 = (byte >> 4) + 48;
+                var digit_1: u8 = (byte & 0b1111) + 48;
+
+                if (digit_0 > 57) {
+                    digit_0 += (97-58);
+                }
+                if (digit_1 > 57) {
+                    digit_1 += (97-58);
+                }
+
+                _ = try writer.write(&[2]u8{digit_0, digit_1});
             } else {
-                try writer.print("  {s}", .{space});
+                // If the byte is does not exist, just print a space.
+                _ = try writer.write("  ");
             }
+
+            // Print the spacing characters.
+            if (i + 1 == parameters.columns)
+                _ = try writer.write("  ") // Final byte, double space.
+            else if (i % 2 == 1)
+                _ = try writer.write(" "); // Second byte of pair, single space.
+
         }
 
         // Print the ascii version of the bytes on the right of the line.
