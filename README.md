@@ -16,5 +16,6 @@ Functional help page printed on `zzd --help` or when passed malformed arguments.
 
 ## Next Steps
 
+- Speed up the program. On a large file, it takes about twice as long as `xxd`  
 - Check if the output file is writable  
 - Add color?
