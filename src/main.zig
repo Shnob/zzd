@@ -59,6 +59,7 @@ pub fn main() !void {
         text.sanitizeAscii(ascii);
 
         // Print index information on the left of the line (in hex).
+        // TODO: Maybe try to optimize this?
         try writer.print("{x:0>8}: ", .{index});
 
         // Iterate through each byte and print the hex representation.
