@@ -29,3 +29,35 @@ pub fn sanitizeAscii(string: []u8) void {
         }
     }
 }
+
+/// ANSI color code for green
+pub const color_green = [7]u8{0x1b, '[', '1', ';', '3', '2', 'm' };
+/// ANSI color code for yellow
+pub const color_yellow = [7]u8{0x1b, '[', '1', ';', '3', '3', 'm' };
+/// ANSI color code for red
+pub const color_red = [7]u8{0x1b, '[', '1', ';', '3', '1', 'm' };
+/// ANSI color code for the null byte
+pub const color_null = [7]u8{0x1b, '[', '1', ';', '3', '7', 'm' };
+/// ANSI clear color code
+pub const color_clear = [4]u8{0x1b, '[', '0', 'm' };
+
+/// Returns ANSI color code appropriate for byte
+pub fn byteColor(byte: u8) *const [7]u8 {
+    // Null is a special case.
+    if (byte == 0) {
+        return &color_null;
+    }
+
+    // If byte is printable, return green.
+    if (std.ascii.isPrint(byte)) {
+        return &color_green;
+    }
+
+    // xxd has these special cases as yellow.
+    if (byte == 0x09 or byte == 0x0a or byte == 0x0d) {
+        return &color_yellow;
+    }
+
+    // Otherwise, return red.
+    return &color_red;
+}
