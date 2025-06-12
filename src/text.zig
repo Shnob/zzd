@@ -37,6 +37,8 @@ pub const color_yellow = [7]u8{0x1b, '[', '1', ';', '3', '3', 'm' };
 /// ANSI color code for red
 pub const color_red = [7]u8{0x1b, '[', '1', ';', '3', '1', 'm' };
 /// ANSI color code for the null byte
+pub const color_blue = [7]u8{0x1b, '[', '1', ';', '3', '4', 'm' };
+/// ANSI color code for the null byte
 pub const color_null = [7]u8{0x1b, '[', '1', ';', '3', '7', 'm' };
 /// ANSI clear color code
 pub const color_clear = [4]u8{0x1b, '[', '0', 'm' };
@@ -46,6 +48,11 @@ pub fn byteColor(byte: u8) *const [7]u8 {
     // Null is a special case.
     if (byte == 0) {
         return &color_null;
+    }
+
+    // 0xff is also a special case
+    if (byte == 0xff) {
+        return &color_blue;
     }
 
     // If byte is printable, return green.
