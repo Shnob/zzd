@@ -98,11 +98,13 @@ pub fn main() !void {
 
         }
 
-        // TODO: Color ascii text the same as the bytes
-        _ = try writer.write(&text.color_clear);
-
         // Print the ascii version of the bytes on the right of the line.
-        _ = try writer.write(ascii[0..n]);
+        for (buf, ascii) |byte, char| {
+            // Color character the same as the byte
+            _ = try writer.write(text.byteColor(byte));
+            _ = try writer.write(&[1]u8{char});
+        }
+
         _ = try writer.write("\n");
 
         if (n < parameters.columns) {
