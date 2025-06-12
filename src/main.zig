@@ -99,7 +99,7 @@ pub fn main() !void {
         }
 
         // Print the ascii version of the bytes on the right of the line.
-        for (buf, ascii) |byte, char| {
+        for (buf[0..n], ascii[0..n]) |byte, char| {
             // Color character the same as the byte
             _ = try writer.write(text.byteColor(byte));
             _ = try writer.write(&[1]u8{char});
