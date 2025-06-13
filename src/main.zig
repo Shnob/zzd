@@ -76,15 +76,15 @@ pub fn main() !void {
                 var digit_1: u8 = (byte & 0b1111) + 48;
 
                 if (digit_0 > 57) {
-                    digit_0 += (97-58);
+                    digit_0 += (97 - 58);
                 }
                 if (digit_1 > 57) {
-                    digit_1 += (97-58);
+                    digit_1 += (97 - 58);
                 }
 
                 _ = try writer.write(text.byteColor(byte));
 
-                _ = try writer.write(&[2]u8{digit_0, digit_1});
+                _ = try writer.write(&[2]u8{ digit_0, digit_1 });
             } else {
                 // If the byte is does not exist, just print a space.
                 _ = try writer.write("  ");
