@@ -30,6 +30,14 @@ pub fn main() !void {
     var bw = std.io.bufferedWriter(output_file.writer());
     const writer = bw.writer();
 
+    // Tracks whether color escape codes should be printed.
+    // Color is used when writing to the terminal via stdout and writing to a file,
+    // but NOT when stdout is redirected to somewhere other than a tty (i.e. `zzd file | less`)
+    const doColor = switch (parameters.output) {
+        .file => true,
+        .stdout => output_file.isTty(),
+    };
+
     // Stores the current line of bytes to be formatted and printed.
     var buf = try allocator.alloc(u8, parameters.columns);
     defer allocator.free(buf);
@@ -59,8 +67,9 @@ pub fn main() !void {
         text.sanitizeAscii(ascii);
 
         // Print index information on the left of the line (in hex).
+        if (doColor)
+            _ = try writer.write(&text.color_clear);
         // TODO: Maybe try to optimize this?
-        _ = try writer.write(&text.color_clear);
         try writer.print("{x:0>8}: ", .{index});
 
         // Iterate through each byte and print the hex representation.
@@ -82,7 +91,8 @@ pub fn main() !void {
                     digit_1 += (97 - 58);
                 }
 
-                _ = try writer.write(text.byteColor(byte));
+                if (doColor)
+                    _ = try writer.write(text.byteColor(byte));
 
                 _ = try writer.write(&[2]u8{ digit_0, digit_1 });
             } else {
@@ -99,10 +109,14 @@ pub fn main() !void {
         }
 
         // Print the ascii version of the bytes on the right of the line.
-        for (buf[0..n], ascii[0..n]) |byte, char| {
-            // Color character the same as the byte
-            _ = try writer.write(text.byteColor(byte));
-            _ = try writer.write(&[1]u8{char});
+        if (doColor) {
+            for (buf[0..n], ascii[0..n]) |byte, char| {
+                // Color character the same as the byte
+                _ = try writer.write(text.byteColor(byte));
+                _ = try writer.write(&[1]u8{char});
+            }
+        } else {
+            _ = try writer.write(ascii[0..n]);
         }
 
         _ = try writer.write("\n");
@@ -113,6 +127,7 @@ pub fn main() !void {
         }
     }
 
-    _ = try writer.write(&text.color_clear);
+    if (doColor)
+        _ = try writer.write(&text.color_clear);
     try bw.flush();
 }
